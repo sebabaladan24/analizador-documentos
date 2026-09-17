@@ -1,0 +1,74 @@
+"""Tests de las partes puras del pipeline (sin Ollama ni Chroma en vivo)."""
+
+from docx import Document
+
+from src.exportar_word import markdown_a_docx
+from src.extraccion import validar_requisitos
+from src.ingesta import chunkear_texto
+from src.servicios_loader import dividir_por_secciones
+
+
+def test_chunkear_texto_vacio():
+    assert chunkear_texto("") == []
+
+
+def test_chunkear_texto_una_sola_parte_si_es_corto():
+    texto = "una dos tres cuatro cinco"
+    assert chunkear_texto(texto, tam_palabras=10, solape_palabras=2) == [texto]
+
+
+def test_chunkear_texto_respeta_solape():
+    palabras = [f"palabra{i}" for i in range(20)]
+    texto = " ".join(palabras)
+    chunks = chunkear_texto(texto, tam_palabras=10, solape_palabras=3)
+    assert len(chunks) >= 2
+    # el final del primer chunk se solapa con el inicio del segundo
+    fin_chunk1 = chunks[0].split()[-3:]
+    inicio_chunk2 = chunks[1].split()[:3]
+    assert fin_chunk1 == inicio_chunk2
+
+
+def test_dividir_por_secciones_basico():
+    cuerpo = "## Descripción\ntexto uno\n\n## SLA\ntexto dos"
+    secciones = dividir_por_secciones(cuerpo)
+    assert secciones == [("Descripción", "texto uno"), ("SLA", "texto dos")]
+
+
+def test_dividir_por_secciones_ignora_vacias():
+    cuerpo = "\n\n## Sección A\ncontenido"
+    secciones = dividir_por_secciones(cuerpo)
+    assert secciones == [("Sección A", "contenido")]
+
+
+def test_validar_requisitos_normaliza_categoria_invalida():
+    entrada = [{"requisito": "Backup diario", "categoria": "no-existe"}]
+    resultado = validar_requisitos(entrada)
+    assert resultado == [{"requisito": "Backup diario", "categoria": "otro"}]
+
+
+def test_validar_requisitos_ignora_items_malformados():
+    entrada = [{"sin_requisito": True}, {"requisito": "Ancho de banda 500 Mbps", "categoria": "red"}]
+    resultado = validar_requisitos(entrada)
+    assert resultado == [{"requisito": "Ancho de banda 500 Mbps", "categoria": "red"}]
+
+
+def test_validar_requisitos_rechaza_no_lista():
+    try:
+        validar_requisitos({"no": "es una lista"})
+        assert False, "debería haber lanzado ValueError"
+    except ValueError:
+        pass
+
+
+def test_markdown_a_docx_genera_documento_valido(tmp_path):
+    markdown = "# Título\n\n## Sección\n- item uno\n- **item en negrita**\n\ntexto normal"
+    buffer = markdown_a_docx(markdown)
+
+    ruta = tmp_path / "salida.docx"
+    ruta.write_bytes(buffer.read())
+
+    documento = Document(str(ruta))
+    textos = [p.text for p in documento.paragraphs]
+    assert "Título" in textos
+    assert "Sección" in textos
+    assert "item uno" in textos
