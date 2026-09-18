@@ -56,6 +56,11 @@ streamlit run app.py
 2. Pestaña "Cargar documento": subir el documento del cliente.
 3. Pestaña "Generar propuesta": elegir el documento, extraer requisitos,
    revisarlos/editarlos, generar la propuesta y exportarla a Word.
+4. Pestaña "Documentos PMI": elegir el documento y generar, de a uno, los
+   documentos base de arranque (Acta de Inicio, Documento de Formulación,
+   Gestión del Cambio, Lecciones Aprendidas, Documento de Cierre). Cada uno
+   es editable antes de exportarlo a Word; las secciones sin información
+   suficiente en el documento del cliente quedan como "[Completar]".
 
 ## Tests
 

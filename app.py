@@ -3,7 +3,16 @@ from pathlib import Path
 
 import streamlit as st
 
-from src import config, exportar_word, extraccion, ingesta, propuesta, resumen, servicios_loader
+from src import (
+    config,
+    documentos_pmi,
+    exportar_word,
+    extraccion,
+    ingesta,
+    propuesta,
+    resumen,
+    servicios_loader,
+)
 
 st.set_page_config(page_title="Generador de Propuestas Técnicas", layout="wide")
 
@@ -37,8 +46,8 @@ else:
 st.title("Generador de Propuestas Técnicas")
 st.caption("100% local — Ollama + Chroma. Ningún documento sale de esta máquina.")
 
-tab_cargar, tab_resumir, tab_comparar, tab_propuesta = st.tabs(
-    ["Cargar documento", "Resumir", "Comparar", "Generar propuesta"]
+tab_cargar, tab_resumir, tab_comparar, tab_propuesta, tab_documentos_pmi = st.tabs(
+    ["Cargar documento", "Resumir", "Comparar", "Generar propuesta", "Documentos PMI"]
 )
 
 
@@ -166,3 +175,56 @@ with tab_propuesta:
                 file_name=f"propuesta-{nombre_proyecto or doc_id}.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             )
+
+with tab_documentos_pmi:
+    st.subheader("Documentos PMI de arranque del proyecto")
+    st.caption(
+        "Acta de Inicio, Documento de Formulación, Gestión del Cambio, Lecciones Aprendidas y "
+        "Documento de Cierre — mismo set que el módulo Documentos de gestión de proyectos. Se "
+        "generan de a uno a partir del documento del cliente, nunca los 5 juntos."
+    )
+
+    docs = _docs_cliente_disponibles()
+    if not docs:
+        st.info("No hay documentos de cliente cargados todavía.")
+    else:
+        doc_id_pmi = st.selectbox(
+            "Documento de cliente",
+            options=list(docs.keys()),
+            format_func=lambda k: docs[k],
+            key="doc_documentos_pmi",
+        )
+
+        if "documentos_pmi_generados" not in st.session_state:
+            st.session_state["documentos_pmi_generados"] = {}
+        generados = st.session_state["documentos_pmi_generados"]
+
+        columnas = st.columns(len(documentos_pmi.PLANTILLAS))
+        for columna, (tipo, plantilla) in zip(columnas, documentos_pmi.PLANTILLAS.items()):
+            with columna:
+                with st.container(border=True):
+                    st.markdown(f"**{plantilla['titulo']}**")
+                    st.caption("Generado ✅" if tipo in generados else "Sin generar")
+                    if st.button("Generar", key=f"generar_{tipo}", use_container_width=True):
+                        with st.spinner(f"Generando {plantilla['titulo']}..."):
+                            texto_cliente = ingesta.obtener_texto_completo(doc_id_pmi)
+                            generados[tipo] = documentos_pmi.generar_documento_pmi(
+                                tipo, texto_cliente
+                            )
+
+        for tipo, contenido in generados.items():
+            titulo = documentos_pmi.PLANTILLAS[tipo]["titulo"]
+            with st.expander(titulo, expanded=True):
+                texto_editado = st.text_area(
+                    "Contenido (editable)", value=contenido, height=350, key=f"editor_{tipo}"
+                )
+                generados[tipo] = texto_editado
+
+                buffer_docx = exportar_word.markdown_a_docx(texto_editado)
+                st.download_button(
+                    f"Exportar '{titulo}' a Word",
+                    data=buffer_docx,
+                    file_name=f"{tipo}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    key=f"exportar_{tipo}",
+                )

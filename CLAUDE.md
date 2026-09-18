@@ -31,7 +31,7 @@ gitignored) · Ollama (LLM + embeddings, todo local) · `python-docx`
 
 ## Estructura
 
-- `app.py` — UI de Streamlit (4 pestañas + barra lateral).
+- `app.py` — UI de Streamlit (5 pestañas + barra lateral).
 - `src/config.py` — paths, nombres de modelo y de colecciones. Todos los
   parámetros ajustables van acá (con override por variable de entorno), nunca
   hardcodeados en otro módulo.
@@ -56,6 +56,18 @@ gitignored) · Ollama (LLM + embeddings, todo local) · `python-docx`
 - `src/propuesta.py` — pipeline de generación: por cada requisito, RAG contra
   `coleccion_servicios`, después un único prompt final que redacta la
   propuesta completa en la plantilla fija.
+- `src/documentos_pmi.py` — genera, uno por vez (nunca los 5 juntos), los
+  documentos PMI de arranque de proyecto: Acta de Inicio, Documento de
+  Formulación, Gestión del Cambio, Lecciones Aprendidas y Documento de
+  Cierre. Mismos títulos y secciones que `src/lib/documentos.ts` del proyecto
+  CPM — si se agrega/renombra una sección ahí, replicar el cambio en
+  `PLANTILLAS` acá para que ambos sigan alineados. Cada sección sin
+  información suficiente en el documento de cliente queda como
+  `"[Completar]"` en vez de inventarse (mismo principio que "sin cobertura
+  clara" de `propuesta.py`) — Lecciones Aprendidas y Documento de Cierre en
+  particular van a tener casi todo así, porque describen una ejecución que
+  todavía no pasó; ambos documentos sirven como esqueleto editable, no como
+  redacción final.
 - `src/exportar_word.py` — markdown simple (`#`/`##`/`###`, `-`, `**negrita**`)
   a `.docx` editable.
 - `src/resumen.py` — funcionalidad original (resumir/comparar un documento de
@@ -134,8 +146,14 @@ documentos de cliente, catálogo de servicios estructurado (con 5 archivos
 de ejemplo a completar con datos reales: Housing, Nube Empresarial, Backup,
 Conectividad, Nube Híbrida), extracción de requisitos en JSON con reintentos,
 generación de propuesta vía RAG contra el catálogo, exportación a Word, y UI
-de Streamlit con 4 pestañas (Cargar documento / Resumir / Comparar / Generar
-propuesta) más la carga del catálogo en la barra lateral. Pendiente para el
-usuario: completar `servicios/*.md` con datos reales de ITC/Antel antes de
-usar la herramienta en propuestas reales. Próximos pasos a definir con el
-usuario.
+de Streamlit con 5 pestañas (Cargar documento / Resumir / Comparar / Generar
+propuesta / Documentos PMI) más la carga del catálogo en la barra lateral.
+La pestaña "Documentos PMI" genera, de a uno, los 5 documentos base de
+arranque (Acta de Inicio, Formulación, Gestión del Cambio, Lecciones
+Aprendidas, Cierre) a partir del documento de cliente — mismo set y
+secciones que el módulo Documentos de CPM. Instalación en Windows resuelta
+con `setup.ps1` (instala Ollama + modelos + venv) e `iniciar.bat` (lanzador
+de doble clic, sin necesidad de abrir terminal en el uso diario). Pendiente
+para el usuario: completar `servicios/*.md` con datos reales de ITC/Antel
+antes de usar la herramienta en propuestas reales. Próximos pasos a definir
+con el usuario.

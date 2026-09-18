@@ -2,6 +2,7 @@
 
 from docx import Document
 
+from src.documentos_pmi import PLANTILLAS
 from src.exportar_word import markdown_a_docx
 from src.extraccion import validar_requisitos
 from src.ingesta import chunkear_texto
@@ -58,6 +59,19 @@ def test_validar_requisitos_rechaza_no_lista():
         assert False, "debería haber lanzado ValueError"
     except ValueError:
         pass
+
+
+def test_plantillas_pmi_tiene_los_5_documentos_esperados():
+    assert set(PLANTILLAS.keys()) == {
+        "acta_inicio",
+        "formulacion",
+        "gestion_cambio",
+        "lecciones_aprendidas",
+        "cierre",
+    }
+    for plantilla in PLANTILLAS.values():
+        assert plantilla["titulo"]
+        assert len(plantilla["secciones"]) > 0
 
 
 def test_markdown_a_docx_genera_documento_valido(tmp_path):
