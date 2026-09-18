@@ -10,7 +10,13 @@ Herramienta 100% local (sin llamadas a servicios externos) que:
 También conserva la funcionalidad original de resumir y comparar documentos
 sueltos.
 
-## Requisitos previos
+## Instalación en Windows
+
+Ver [`WINDOWS.md`](WINDOWS.md) — incluye un script automático (`setup.ps1`) y
+el paso a paso manual (instalar Ollama, descargar modelos, crear el entorno
+virtual).
+
+## Requisitos previos (Linux/macOS o referencia general)
 
 - [Ollama](https://ollama.com) corriendo localmente, con los modelos:
   ```bash
