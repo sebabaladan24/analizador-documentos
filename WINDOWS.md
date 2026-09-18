@@ -27,6 +27,26 @@ streamlit run app.py
 
 Se abre solo en el navegador en `http://localhost:8501`.
 
+## Arrancarlo con doble clic (después de la instalación inicial)
+
+Una vez que corriste `setup.ps1` al menos una vez, no hace falta volver a abrir
+PowerShell. En la carpeta del proyecto hay un archivo `iniciar.bat`:
+
+- Doble clic sobre `iniciar.bat` → activa el entorno, se asegura de que Ollama
+  esté corriendo, y abre la app sola en el navegador.
+- Se abre una ventana negra de consola (es normal, ahí se ven los logs) —
+  dejala minimizada mientras usás la app; cerrarla apaga la app.
+
+### Crear un acceso directo en el escritorio (opcional)
+
+1. Click derecho sobre `iniciar.bat` → **Crear acceso directo**.
+2. Cortá ese acceso directo (`Ctrl+X`) y pegalo (`Ctrl+V`) en el Escritorio.
+3. Si querés cambiarle el nombre, click derecho → **Cambiar nombre** → ej.
+   "Generador de Propuestas".
+
+Con eso queda un ícono en el escritorio para abrir la herramienta con un solo
+doble clic, sin terminal ni comandos.
+
 ## Opción manual (si el script falla o preferís hacerlo paso a paso)
 
 ### 1. Instalar Ollama
