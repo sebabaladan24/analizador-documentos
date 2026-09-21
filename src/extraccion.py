@@ -10,7 +10,8 @@ cliente y extraer los requisitos técnicos mencionados, como una lista JSON.
 
 Reglas estrictas:
 - Devolvé EXCLUSIVAMENTE un array JSON válido, sin texto antes ni después, sin bloques de código \
-markdown.
+markdown. Un array a secas, por ejemplo [...] — NO lo envuelvas en un objeto como \
+{"requisitos": [...]}.
 - Cada elemento del array es un objeto: {"requisito": "<texto breve y concreto>", \
 "categoria": "<categoría>"}.
 - Las categorías deben ser una de: computo, almacenamiento, red, compliance, disponibilidad, \
@@ -30,6 +31,14 @@ CATEGORIAS_VALIDAS = {
 
 
 def validar_requisitos(resultado) -> list[dict]:
+    if isinstance(resultado, dict):
+        # A pesar de la instrucción, el modelo a veces envuelve el array en
+        # un objeto (p.ej. {"requisitos": [...]}). Si hay exactamente un
+        # valor que es una lista, lo desenvolvemos en vez de fallar.
+        valores_lista = [v for v in resultado.values() if isinstance(v, list)]
+        if len(valores_lista) == 1:
+            resultado = valores_lista[0]
+
     if not isinstance(resultado, list):
         raise ValueError("Se esperaba una lista JSON de requisitos.")
 

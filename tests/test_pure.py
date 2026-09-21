@@ -63,6 +63,23 @@ def test_validar_requisitos_rechaza_no_lista():
         pass
 
 
+def test_validar_requisitos_desenvuelve_objeto_con_una_lista():
+    # el modelo a veces envuelve el array pedido en un objeto, p.ej.
+    # {"requisitos": [...]} en vez de [...] a secas.
+    entrada = {"requisitos": [{"requisito": "Backup diario", "categoria": "otro"}]}
+    resultado = validar_requisitos(entrada)
+    assert resultado == [{"requisito": "Backup diario", "categoria": "otro"}]
+
+
+def test_validar_requisitos_rechaza_objeto_con_varias_listas():
+    entrada = {"a": [1], "b": [2]}
+    try:
+        validar_requisitos(entrada)
+        assert False, "debería haber lanzado ValueError"
+    except ValueError:
+        pass
+
+
 def test_plantillas_pmi_tiene_los_5_documentos_esperados():
     assert set(PLANTILLAS.keys()) == {
         "acta_inicio",
