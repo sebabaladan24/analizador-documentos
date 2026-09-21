@@ -14,38 +14,43 @@
    .\setup.ps1
    ```
    El script instala Ollama (si falta), descarga los dos modelos necesarios, crea
-   el entorno virtual de Python e instala las dependencias. Puede pedirte cerrar y
-   volver a abrir la terminal una vez (para que el PATH tome el instalador de
-   Ollama) — en ese caso, volvé a correr `.\setup.ps1`.
+   el entorno virtual de Python, instala las dependencias, y **crea un ícono
+   "Generador de Propuestas" en tu escritorio**. Puede pedirte cerrar y volver a
+   abrir la terminal una vez (para que el PATH tome el instalador de Ollama) —
+   en ese caso, volvé a correr `.\setup.ps1`.
 
-Al terminar, para arrancar la app:
+## Uso diario: como si fuera una aplicación
 
-```powershell
-.\.venv\Scripts\Activate.ps1
-streamlit run app.py
-```
+Después de correr `setup.ps1` una vez, no hace falta abrir PowerShell nunca más:
 
-Se abre solo en el navegador en `http://localhost:8501`.
+- Doble clic en el ícono **"Generador de Propuestas"** del escritorio.
+- Se abre una ventana propia (sin pestañas ni barra de direcciones de
+  navegador — Chrome o Edge en "modo app") con la herramienta, como si fuera
+  una aplicación de escritorio normal.
+- Por atrás se abre además una ventanita de consola minimizada (el "motor" —
+  Ollama + el servidor de la app). Es normal, no hace falta tocarla; queda
+  minimizada en la barra de tareas.
 
-## Arrancarlo con doble clic (después de la instalación inicial)
+**Para cerrar del todo**: cerrar la ventana de la app no alcanza para apagar el
+servidor de atrás (queda corriendo en la ventanita minimizada, por si querés
+volver a abrir la app sin esperar que arranque de nuevo). Si querés apagarlo
+por completo, buscá esa ventana minimizada en la barra de tareas y cerrala
+(o Administrador de tareas → buscar "streamlit"/"python" → Finalizar tarea).
 
-Una vez que corriste `setup.ps1` al menos una vez, no hace falta volver a abrir
-PowerShell. En la carpeta del proyecto hay un archivo `iniciar.bat`:
+Si el ícono del escritorio no se creó solo (`setup.ps1` avisa si falló), se
+puede crear a mano:
 
-- Doble clic sobre `iniciar.bat` → activa el entorno, se asegura de que Ollama
-  esté corriendo, y abre la app sola en el navegador.
-- Se abre una ventana negra de consola (es normal, ahí se ven los logs) —
-  dejala minimizada mientras usás la app; cerrarla apaga la app.
-
-### Crear un acceso directo en el escritorio (opcional)
-
-1. Click derecho sobre `iniciar.bat` → **Crear acceso directo**.
+1. Click derecho sobre `iniciar_app.vbs` → **Crear acceso directo**.
 2. Cortá ese acceso directo (`Ctrl+X`) y pegalo (`Ctrl+V`) en el Escritorio.
 3. Si querés cambiarle el nombre, click derecho → **Cambiar nombre** → ej.
    "Generador de Propuestas".
 
-Con eso queda un ícono en el escritorio para abrir la herramienta con un solo
-doble clic, sin terminal ni comandos.
+### Si algo falla: `iniciar.bat`
+
+`iniciar_app.vbs` no muestra ninguna consola, así que si algo sale mal no vas
+a ver el error. Para eso está `iniciar.bat` (en la misma carpeta): hace
+exactamente lo mismo pero con la consola visible, mostrando los logs y
+cualquier error en pantalla — útil para diagnosticar problemas.
 
 ## Opción manual (si el script falla o preferís hacerlo paso a paso)
 
@@ -118,3 +123,11 @@ corriendo como servicio en segundo plano.
   opción rápida arriba.
 - **Streamlit no abre el navegador solo**: entrá manualmente a
   `http://localhost:8501`.
+- **El ícono del escritorio abre una pestaña de navegador normal (con barra de
+  direcciones), no una "ventana de app"**: no se encontró Chrome ni Edge en las
+  rutas habituales de instalación — igual funciona, solo que con la interfaz
+  normal del navegador en vez del modo app.
+- **Doble clic en el ícono y no pasa nada visible**: esperá unos 10-15
+  segundos (Ollama + Streamlit tardan en levantar la primera vez). Si después
+  de eso sigue sin abrir nada, corré `iniciar.bat` en su lugar para ver el
+  error en pantalla.

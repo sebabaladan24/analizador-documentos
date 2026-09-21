@@ -152,8 +152,15 @@ La pestaña "Documentos PMI" genera, de a uno, los 5 documentos base de
 arranque (Acta de Inicio, Formulación, Gestión del Cambio, Lecciones
 Aprendidas, Cierre) a partir del documento de cliente — mismo set y
 secciones que el módulo Documentos de CPM. Instalación en Windows resuelta
-con `setup.ps1` (instala Ollama + modelos + venv) e `iniciar.bat` (lanzador
-de doble clic, sin necesidad de abrir terminal en el uso diario). Pendiente
-para el usuario: completar `servicios/*.md` con datos reales de ITC/Antel
-antes de usar la herramienta en propuestas reales. Próximos pasos a definir
-con el usuario.
+con `setup.ps1` (instala Ollama + modelos + venv) que además crea un ícono de
+escritorio; uso diario "como app" vía `iniciar_app.vbs` (invisible, abre
+Chrome/Edge en modo app sin barra de direcciones — `_iniciar_interno.bat` es
+su motor interno, no se corre directo) e `iniciar.bat` como variante con
+consola visible para diagnosticar errores.
+
+Deploy en la nube (Railway u otro) fue evaluado y descartado a pedido del
+usuario: rompe la premisa "100% local" del proyecto (los documentos de
+cliente dejarían de quedarse en su máquina) — no reabrir esa opción sin que
+el usuario la pida explícitamente de nuevo. Pendiente para el usuario:
+completar `servicios/*.md` con datos reales de ITC/Antel antes de usar la
+herramienta en propuestas reales. Próximos pasos a definir con el usuario.
