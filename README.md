@@ -41,9 +41,14 @@ specs de ejemplo marcadas `X` o "COMPLETAR CON DATOS REALES". Hay que editarlos 
 los datos reales de la empresa antes de generar propuestas — un modelo de este
 tamaño no va a inventar SLAs correctos, y tampoco debe hacerlo.
 
-Para agregar un servicio nuevo, copiar `servicios/_template.md` y completar sus
-secciones (Descripción, Especificaciones técnicas, SLA, Cuándo ofrecerlo / Cuándo
-NO ofrecerlo).
+Para agregar un servicio nuevo, dos formas:
+
+- A mano: copiar `servicios/_template.md` y completar sus secciones (Descripción,
+  Especificaciones técnicas, SLA, Cuándo ofrecerlo / Cuándo NO ofrecerlo).
+- Asistido: pestaña "Catálogo de servicios" de la app — subís un PDF/Word/folleto
+  que ya tengas del servicio, la IA arma un borrador con esas mismas secciones, y
+  lo revisás/editás antes de guardarlo. Los campos que el documento no dice
+  explícitamente quedan marcados "[Verificar...]" en vez de inventarse.
 
 ## Uso
 
@@ -51,8 +56,9 @@ NO ofrecerlo).
 streamlit run app.py
 ```
 
-1. En la barra lateral, click en "Cargar / recargar catálogo de servicios" (una
-   vez, o cada vez que edites `servicios/*.md`).
+1. Catálogo de servicios: pestaña "Catálogo de servicios" (asistido por IA, ver
+   arriba) o editar `servicios/*.md` a mano y tocar "Cargar / recargar catálogo
+   de servicios" en la barra lateral.
 2. Pestaña "Cargar documento": subir el documento del cliente.
 3. Pestaña "Generar propuesta": elegir el documento, extraer requisitos,
    revisarlos/editarlos, generar la propuesta y exportarla a Word.

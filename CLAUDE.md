@@ -31,7 +31,7 @@ gitignored) · Ollama (LLM + embeddings, todo local) · `python-docx`
 
 ## Estructura
 
-- `app.py` — UI de Streamlit (5 pestañas + barra lateral).
+- `app.py` — UI de Streamlit (6 pestañas + barra lateral).
 - `src/config.py` — paths, nombres de modelo y de colecciones. Todos los
   parámetros ajustables van acá (con override por variable de entorno), nunca
   hardcodeados en otro módulo.
@@ -44,6 +44,18 @@ gitignored) · Ollama (LLM + embeddings, todo local) · `python-docx`
   secciones `##`) e indexado en `coleccion_servicios`. Recarga completa
   (`reemplazar=True` por default) para que el catálogo indexado siempre
   refleje el estado actual de los archivos.
+- `src/servicios_extraccion.py` — camino alternativo para poblar el catálogo:
+  a partir de un PDF/Word/folleto suelto que el usuario ya tenga, extrae un
+  borrador de ficha de servicio en JSON (mismos 5 campos que la plantilla) y
+  lo convierte a markdown con `borrador_a_markdown()`. A diferencia de
+  `servicios_loader.py` (que solo lee `.md` ya estructurados, sin ninguna
+  IA de por medio), acá el modelo sí interpreta texto libre — por eso el
+  resultado NUNCA se guarda directo: `app.py` (pestaña "Catálogo de
+  servicios") lo muestra editable primero, y recién al tocar "Guardar" se
+  escribe a `/servicios/*.md` y se reindexa. Los campos que el documento
+  fuente no menciona con claridad quedan como
+  `"[Verificar - no especificado en el documento fuente]"` en vez de
+  inventarse.
 - `src/llm.py` — wrapper sobre Ollama. `chat()` para prosa libre;
   `generar_json()` fuerza `format="json"` y reintenta pasándole el error de
   parseo al modelo si la respuesta no es JSON válido. Estos dos modos están
@@ -146,12 +158,17 @@ documentos de cliente, catálogo de servicios estructurado (con 5 archivos
 de ejemplo a completar con datos reales: Housing, Nube Empresarial, Backup,
 Conectividad, Nube Híbrida), extracción de requisitos en JSON con reintentos,
 generación de propuesta vía RAG contra el catálogo, exportación a Word, y UI
-de Streamlit con 5 pestañas (Cargar documento / Resumir / Comparar / Generar
-propuesta / Documentos PMI) más la carga del catálogo en la barra lateral.
-La pestaña "Documentos PMI" genera, de a uno, los 5 documentos base de
-arranque (Acta de Inicio, Formulación, Gestión del Cambio, Lecciones
-Aprendidas, Cierre) a partir del documento de cliente — mismo set y
-secciones que el módulo Documentos de CPM. Instalación en Windows resuelta
+de Streamlit con 6 pestañas (Cargar documento / Catálogo de servicios /
+Resumir / Comparar / Generar propuesta / Documentos PMI) más la carga rápida
+del catálogo en la barra lateral. La pestaña "Documentos PMI" genera, de a
+uno, los 5 documentos base de arranque (Acta de Inicio, Formulación, Gestión
+del Cambio, Lecciones Aprendidas, Cierre) a partir del documento de cliente —
+mismo set y secciones que el módulo Documentos de CPM. La pestaña "Catálogo
+de servicios" permite subir un PDF/Word suelto de un servicio propio y arma
+un borrador de ficha vía IA (`src/servicios_extraccion.py`), editable antes
+de guardarlo como `.md` — la barra lateral sigue siendo la vía rápida para
+recargar lo que ya está en `/servicios/*.md` sin pasar por la IA. Instalación
+en Windows resuelta
 con `setup.ps1` (instala Ollama + modelos + venv) que además crea un ícono de
 escritorio; uso diario "como app" vía `iniciar_app.vbs` (invisible, abre
 Chrome/Edge en modo app sin barra de direcciones — `_iniciar_interno.bat` es

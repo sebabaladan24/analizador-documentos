@@ -6,6 +6,7 @@ from src.documentos_pmi import PLANTILLAS
 from src.exportar_word import markdown_a_docx
 from src.extraccion import validar_requisitos
 from src.ingesta import chunkear_texto
+from src.servicios_extraccion import borrador_a_markdown, slug_desde_nombre
 from src.servicios_loader import dividir_por_secciones
 
 
@@ -72,6 +73,53 @@ def test_plantillas_pmi_tiene_los_5_documentos_esperados():
     for plantilla in PLANTILLAS.values():
         assert plantilla["titulo"]
         assert len(plantilla["secciones"]) > 0
+
+
+def test_slug_desde_nombre_normaliza():
+    assert slug_desde_nombre("Nube Empresarial (IaaS)") == "nube-empresarial-iaas"
+    assert slug_desde_nombre("   ") == "servicio"
+
+
+def test_borrador_a_markdown_usa_placeholder_en_campos_vacios():
+    datos = {
+        "nombre": "Backup Extra",
+        "categoria": "Continuidad",
+        "descripcion": "Backup adicional para clientes grandes.",
+        "especificaciones_tecnicas": "",
+        "sla": "- Disponibilidad 99.9%",
+        "cuando_ofrecerlo": "",
+        "cuando_no_ofrecerlo": "",
+    }
+    markdown = borrador_a_markdown(datos)
+
+    assert "nombre: Backup Extra" in markdown
+    assert "categoria: Continuidad" in markdown
+    assert "## Descripción\nBackup adicional para clientes grandes." in markdown
+    assert "## Especificaciones técnicas\n[Verificar" in markdown
+    assert "## SLA\n- Disponibilidad 99.9%" in markdown
+
+
+def test_borrador_a_markdown_es_parseable_por_dividir_por_secciones():
+    datos = {
+        "nombre": "Servicio X",
+        "categoria": "Cat",
+        "descripcion": "Desc",
+        "especificaciones_tecnicas": "Specs",
+        "sla": "SLA",
+        "cuando_ofrecerlo": "Ofrecer",
+        "cuando_no_ofrecerlo": "No ofrecer",
+    }
+    markdown = borrador_a_markdown(datos)
+    cuerpo = markdown.split("---\n", 2)[-1]
+    secciones = dividir_por_secciones(cuerpo)
+    titulos = [titulo for titulo, _ in secciones]
+    assert titulos == [
+        "Descripción",
+        "Especificaciones técnicas",
+        "SLA",
+        "Cuándo ofrecerlo",
+        "Cuándo NO ofrecerlo",
+    ]
 
 
 def test_markdown_a_docx_genera_documento_valido(tmp_path):

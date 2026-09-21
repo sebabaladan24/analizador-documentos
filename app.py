@@ -11,6 +11,7 @@ from src import (
     ingesta,
     propuesta,
     resumen,
+    servicios_extraccion,
     servicios_loader,
 )
 
@@ -18,7 +19,11 @@ st.set_page_config(page_title="Generador de Propuestas Técnicas", layout="wide"
 
 # --- Barra lateral: catálogo de servicios (fuente separada de los docs de cliente) ---
 st.sidebar.header("Base de conocimiento de servicios")
-st.sidebar.caption(f"Archivos leídos desde `{config.SERVICIOS_DIR.name}/`")
+st.sidebar.caption(
+    f"Archivos leídos desde `{config.SERVICIOS_DIR.name}/`. Para agregar servicios desde un "
+    "PDF/Word, usá la pestaña 'Catálogo de servicios' — esto de acá solo reindexa lo que ya "
+    "está guardado en esa carpeta."
+)
 
 if st.sidebar.button("Cargar / recargar catálogo de servicios"):
     with st.sidebar:
@@ -46,8 +51,15 @@ else:
 st.title("Generador de Propuestas Técnicas")
 st.caption("100% local — Ollama + Chroma. Ningún documento sale de esta máquina.")
 
-tab_cargar, tab_resumir, tab_comparar, tab_propuesta, tab_documentos_pmi = st.tabs(
-    ["Cargar documento", "Resumir", "Comparar", "Generar propuesta", "Documentos PMI"]
+tab_cargar, tab_catalogo, tab_resumir, tab_comparar, tab_propuesta, tab_documentos_pmi = st.tabs(
+    [
+        "Cargar documento",
+        "Catálogo de servicios",
+        "Resumir",
+        "Comparar",
+        "Generar propuesta",
+        "Documentos PMI",
+    ]
 )
 
 
@@ -72,6 +84,78 @@ with tab_cargar:
             st.error(str(error))
         finally:
             ruta_tmp.unlink(missing_ok=True)
+
+with tab_catalogo:
+    st.subheader("Agregar un servicio al catálogo desde un documento")
+    st.caption(
+        "Subí un folleto, ficha técnica o Word/PDF que ya tengas de un servicio propio. La IA "
+        "arma un borrador estructurado — revisalo y corregilo antes de guardarlo: puede no "
+        "captar bien las specs que el documento no dice de forma explícita, y nunca hay que "
+        "confiar en eso sin revisarlo primero."
+    )
+
+    archivo_servicio = st.file_uploader(
+        "Documento del servicio (PDF, DOCX, TXT o MD)",
+        type=["pdf", "docx", "txt", "md"],
+        key="uploader_servicio",
+    )
+    if archivo_servicio and st.button("Extraer borrador"):
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=Path(archivo_servicio.name).suffix
+        ) as tmp:
+            tmp.write(archivo_servicio.getbuffer())
+            ruta_tmp = Path(tmp.name)
+        try:
+            with st.spinner("Extrayendo información del documento..."):
+                texto_servicio = ingesta.extraer_texto(ruta_tmp)
+                st.session_state["borrador_servicio"] = servicios_extraccion.extraer_borrador_servicio(
+                    texto_servicio
+                )
+        except ValueError as error:
+            st.error(f"No se pudo extraer el borrador: {error}")
+        finally:
+            ruta_tmp.unlink(missing_ok=True)
+
+    if "borrador_servicio" in st.session_state:
+        borrador = st.session_state["borrador_servicio"]
+        st.warning(
+            "Revisá cada campo antes de guardar. Los que dicen '[Verificar...]' no estaban "
+            "claros en el documento fuente — completalos a mano si corresponde, o dejalos así "
+            "si de verdad no aplican."
+        )
+
+        col1, col2 = st.columns(2)
+        with col1:
+            borrador["nombre"] = st.text_input(
+                "Nombre del servicio", value=borrador.get("nombre", ""), key="campo_nombre"
+            )
+        with col2:
+            borrador["categoria"] = st.text_input(
+                "Categoría", value=borrador.get("categoria", ""), key="campo_categoria"
+            )
+
+        for clave, titulo in servicios_extraccion.CAMPOS_ORDEN:
+            borrador[clave] = st.text_area(
+                titulo, value=borrador.get(clave, ""), height=120, key=f"campo_{clave}"
+            )
+
+        if st.button("Guardar en el catálogo"):
+            if not borrador["nombre"].strip():
+                st.error("Ponele un nombre al servicio antes de guardar.")
+            else:
+                nombre_archivo = f"{servicios_extraccion.slug_desde_nombre(borrador['nombre'])}.md"
+                ruta_destino = config.SERVICIOS_DIR / nombre_archivo
+                ruta_destino.write_text(
+                    servicios_extraccion.borrador_a_markdown(borrador), encoding="utf-8"
+                )
+                with st.spinner("Guardando y recargando el catálogo..."):
+                    servicios, total_chunks = servicios_loader.cargar_catalogo_servicios()
+                st.session_state["servicios_cargados"] = servicios
+                del st.session_state["borrador_servicio"]
+                st.success(
+                    f"Guardado como `servicios/{nombre_archivo}` y recargado en el catálogo "
+                    f"({len(servicios)} servicios, {total_chunks} fragmentos)."
+                )
 
 with tab_resumir:
     st.subheader("Resumir documento de cliente")
