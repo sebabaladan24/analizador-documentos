@@ -6,6 +6,7 @@ from src.documentos_pmi import PLANTILLAS
 from src.exportar_word import markdown_a_docx
 from src.extraccion import validar_requisitos
 from src.ingesta import chunkear_texto
+from src.plantilla_word import documento_pmi_a_docx
 from src.servicios_extraccion import borrador_a_markdown, slug_desde_nombre
 from src.servicios_loader import dividir_por_secciones
 
@@ -120,6 +121,30 @@ def test_borrador_a_markdown_es_parseable_por_dividir_por_secciones():
         "Cuándo ofrecerlo",
         "Cuándo NO ofrecerlo",
     ]
+
+
+def test_documento_pmi_a_docx_tiene_portada_y_secciones(tmp_path):
+    markdown = (
+        "# Acta de Inicio\n\n"
+        "## Nombre del proyecto\n"
+        "Migración a la nube\n\n"
+        "## Patrocinador (sponsor)\n"
+        "[Completar]\n"
+    )
+    buffer = documento_pmi_a_docx("Acta de Inicio", "Cliente Demo S.A.", markdown)
+
+    ruta = tmp_path / "acta.docx"
+    ruta.write_bytes(buffer.read())
+
+    documento = Document(str(ruta))
+    textos = [p.text for p in documento.paragraphs]
+
+    assert "Acta de Inicio" in textos
+    assert "Cliente Demo S.A." in textos
+    assert "Nombre del proyecto" in textos
+    assert "Migración a la nube" in textos
+    # el título no se repite dentro del cuerpo (ya está en la portada)
+    assert textos.count("Acta de Inicio") == 1
 
 
 def test_markdown_a_docx_genera_documento_valido(tmp_path):

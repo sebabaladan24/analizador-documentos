@@ -9,6 +9,7 @@ from src import (
     exportar_word,
     extraccion,
     ingesta,
+    plantilla_word,
     propuesta,
     resumen,
     servicios_extraccion,
@@ -278,6 +279,11 @@ with tab_documentos_pmi:
             format_func=lambda k: docs[k],
             key="doc_documentos_pmi",
         )
+        nombre_proyecto_pmi = st.text_input(
+            "Nombre del cliente/proyecto (va en la portada del Word)",
+            value=docs.get(doc_id_pmi, ""),
+            key="nombre_proyecto_pmi",
+        )
 
         if "documentos_pmi_generados" not in st.session_state:
             st.session_state["documentos_pmi_generados"] = {}
@@ -304,7 +310,9 @@ with tab_documentos_pmi:
                 )
                 generados[tipo] = texto_editado
 
-                buffer_docx = exportar_word.markdown_a_docx(texto_editado)
+                buffer_docx = plantilla_word.documento_pmi_a_docx(
+                    titulo, nombre_proyecto_pmi or docs.get(doc_id_pmi, ""), texto_editado
+                )
                 st.download_button(
                     f"Exportar '{titulo}' a Word",
                     data=buffer_docx,
