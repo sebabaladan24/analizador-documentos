@@ -7,6 +7,12 @@
   anterior no era JSON válido. Se usa solo para la extracción de
   requisitos, que es la parte que no puede darse el lujo de romper el
   formato esperado.
+
+Usa un `ollama.Client` propio con timeout en vez de las funciones sueltas
+del paquete (`ollama.chat`) — esas usan un cliente por default con
+`timeout=None`, que en httpx significa "esperar para siempre". Sin esto,
+si Ollama se traba (falta de memoria, modelo colgado), la UI queda
+"cargando" sin ningún error nunca.
 """
 
 import json
@@ -14,6 +20,8 @@ import json
 import ollama
 
 from . import config
+
+_cliente = ollama.Client(timeout=config.LLM_TIMEOUT_SEGUNDOS)
 
 
 def chat(mensajes: list[dict], temperature: float = 0.2, json_mode: bool = False) -> str:
@@ -24,7 +32,7 @@ def chat(mensajes: list[dict], temperature: float = 0.2, json_mode: bool = False
     }
     if json_mode:
         kwargs["format"] = "json"
-    respuesta = ollama.chat(**kwargs)
+    respuesta = _cliente.chat(**kwargs)
     return respuesta["message"]["content"]
 
 

@@ -6,6 +6,10 @@ Los embeddings se calculan a mano con Ollama y se pasan directamente a
 Chroma (en vez de usar el mecanismo de `embedding_function` de la
 librería), para no depender de qué firma de esa interfaz soporta la
 versión de chromadb instalada.
+
+Usa un `ollama.Client` propio con timeout — igual que `llm.py` — en vez
+de `ollama.embeddings()` suelto, que por default espera para siempre si
+Ollama se traba.
 """
 
 from pathlib import Path
@@ -16,6 +20,7 @@ import ollama
 from . import config
 
 _client = None
+_cliente_ollama = ollama.Client(timeout=config.EMBED_TIMEOUT_SEGUNDOS)
 
 
 def get_client():
@@ -31,7 +36,15 @@ def get_collection(nombre: str):
 
 
 def embed(textos: list[str]) -> list[list[float]]:
-    return [ollama.embeddings(model=config.EMBED_MODEL, prompt=t)["embedding"] for t in textos]
+    """Calcula todos los embeddings en un solo pedido a Ollama (soporta
+    lote vía /api/embed) en vez de uno por fragmento — con documentos de
+    varias páginas, mandar 50-100 pedidos HTTP secuenciales es la
+    diferencia entre segundos y minutos.
+    """
+    if not textos:
+        return []
+    respuesta = _cliente_ollama.embed(model=config.EMBED_MODEL, input=textos)
+    return list(respuesta.embeddings)
 
 
 def add_chunks(coleccion: str, ids: list[str], documentos: list[str], metadatas: list[dict]):

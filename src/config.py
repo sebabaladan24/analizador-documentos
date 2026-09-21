@@ -10,6 +10,14 @@ SERVICIOS_DIR = Path(os.environ.get("ANALIZADOR_SERVICIOS_DIR", BASE_DIR / "serv
 LLM_MODEL = os.environ.get("ANALIZADOR_LLM_MODEL", "qwen2.5:7b-instruct")
 EMBED_MODEL = os.environ.get("ANALIZADOR_EMBED_MODEL", "nomic-embed-text")
 
+# La librería de Ollama no pone timeout por defecto (timeout=None => espera
+# para siempre). Generoso a propósito: en CPU sin GPU, generar un documento
+# largo puede tardar varios minutos y no queremos cortar algo que va a
+# terminar bien. Es una red de seguridad para cuando Ollama está realmente
+# trabado, no un límite agresivo.
+LLM_TIMEOUT_SEGUNDOS = int(os.environ.get("ANALIZADOR_LLM_TIMEOUT_SEGUNDOS", "900"))
+EMBED_TIMEOUT_SEGUNDOS = int(os.environ.get("ANALIZADOR_EMBED_TIMEOUT_SEGUNDOS", "180"))
+
 COLECCION_CLIENTES = "coleccion_clientes"
 COLECCION_SERVICIOS = "coleccion_servicios"
 

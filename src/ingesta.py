@@ -10,6 +10,7 @@ import docx
 from pypdf import PdfReader
 
 from . import config, vectorstore
+from .texto import chunkear_texto as _chunkear_texto_generico
 
 
 def extraer_texto(ruta: Path) -> str:
@@ -28,19 +29,7 @@ def chunkear_texto(
     tam_palabras: int = config.CHUNK_SIZE_WORDS,
     solape_palabras: int = config.CHUNK_OVERLAP_WORDS,
 ) -> list[str]:
-    palabras = texto.split()
-    if not palabras:
-        return []
-    chunks = []
-    inicio = 0
-    paso = max(tam_palabras - solape_palabras, 1)
-    while inicio < len(palabras):
-        fin = inicio + tam_palabras
-        chunks.append(" ".join(palabras[inicio:fin]))
-        if fin >= len(palabras):
-            break
-        inicio += paso
-    return chunks
+    return _chunkear_texto_generico(texto, tam_palabras, solape_palabras)
 
 
 def ingerir_documento_cliente(ruta: Path, nombre_archivo: str) -> str:

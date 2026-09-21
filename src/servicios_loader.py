@@ -1,9 +1,16 @@
 """Carga el catálogo propio de servicios (`/servicios/*.md`) a
 `coleccion_servicios`. Cada archivo tiene frontmatter (nombre, categoria)
-y un cuerpo dividido en secciones `##`; cada sección se indexa como un
-chunk separado con metadata propia, para que el RAG pueda recuperar
-justo la sección relevante (specs, SLA, cuándo NO ofrecerlo, etc.) en vez
-de todo el archivo entero.
+y un cuerpo dividido en secciones `##`; cada sección se indexa con
+metadata propia, para que el RAG pueda recuperar justo la sección
+relevante (specs, SLA, cuándo NO ofrecerlo, etc.) en vez de todo el
+archivo entero.
+
+Una sección puede ser larga (una ficha con muchas specs, o un borrador
+armado por `servicios_extraccion.py` a partir de un PDF largo), así que
+cada sección se trocea con el mismo `chunkear_texto` que usa la ingesta
+de documentos de cliente antes de mandarla a embeddings — sin esto,
+Ollama devuelve "the input length exceeds the context length" en vez de
+indexarla.
 """
 
 import re
@@ -12,6 +19,7 @@ from pathlib import Path
 import frontmatter
 
 from . import config, vectorstore
+from .texto import chunkear_texto
 
 
 def dividir_por_secciones(cuerpo: str) -> list[tuple[str, str]]:
@@ -59,19 +67,23 @@ def cargar_catalogo_servicios(reemplazar: bool = True) -> tuple[list[str], int]:
 
         ids, documentos, metadatas = [], [], []
         for i, (titulo, contenido) in enumerate(secciones):
-            texto = f"## {titulo}\n{contenido}".strip()
             if not contenido:
                 continue
-            ids.append(f"{archivo.stem}__{i}")
-            documentos.append(texto)
-            metadatas.append(
-                {
-                    "nombre_servicio": nombre,
-                    "categoria": categoria,
-                    "seccion": titulo,
-                    "archivo": archivo.name,
-                }
+            texto_seccion = f"## {titulo}\n{contenido}".strip()
+            fragmentos = chunkear_texto(
+                texto_seccion, config.CHUNK_SIZE_WORDS, config.CHUNK_OVERLAP_WORDS
             )
+            for j, fragmento in enumerate(fragmentos):
+                ids.append(f"{archivo.stem}__{i}__{j}")
+                documentos.append(fragmento)
+                metadatas.append(
+                    {
+                        "nombre_servicio": nombre,
+                        "categoria": categoria,
+                        "seccion": titulo,
+                        "archivo": archivo.name,
+                    }
+                )
 
         if ids:
             vectorstore.add_chunks(config.COLECCION_SERVICIOS, ids, documentos, metadatas)

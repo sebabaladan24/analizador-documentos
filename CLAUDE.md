@@ -36,14 +36,24 @@ gitignored) · Ollama (LLM + embeddings, todo local) · `python-docx`
   parámetros ajustables van acá (con override por variable de entorno), nunca
   hardcodeados en otro módulo.
 - `src/vectorstore.py` — único punto de acceso a Chroma. Los embeddings se
-  calculan a mano con Ollama y se pasan directo (`add`/`query` con
-  `embeddings=`), no se usa el mecanismo de `embedding_function` de chromadb.
-- `src/ingesta.py` — extracción de texto (PDF/DOCX/TXT/MD), chunking e
-  indexado de documentos de **cliente** en `coleccion_clientes`.
+  calculan a mano con Ollama (`Client.embed()`, en **un solo pedido en lote**
+  para toda la lista de fragmentos — no uno por fragmento, eso es la
+  diferencia entre segundos y minutos con un documento de varias páginas) y
+  se pasan directo a Chroma (`add`/`query` con `embeddings=`), no se usa el
+  mecanismo de `embedding_function` de chromadb.
+- `src/texto.py` — `chunkear_texto()`, compartido por `ingesta.py` y
+  `servicios_loader.py`. Existe aparte porque las dos cosas lo necesitan: sin
+  trocear un texto largo antes de mandarlo a embeddings, Ollama tira
+  `the input length exceeds the context length` en vez de indexarlo.
+- `src/ingesta.py` — extracción de texto (PDF/DOCX/TXT/MD), chunking (vía
+  `texto.chunkear_texto`) e indexado de documentos de **cliente** en
+  `coleccion_clientes`.
 - `src/servicios_loader.py` — parseo de `/servicios/*.md` (frontmatter +
-  secciones `##`) e indexado en `coleccion_servicios`. Recarga completa
-  (`reemplazar=True` por default) para que el catálogo indexado siempre
-  refleje el estado actual de los archivos.
+  secciones `##`) e indexado en `coleccion_servicios`. Cada sección se
+  trocea con `texto.chunkear_texto` antes de indexarla (una sección puede
+  ser larga, sobre todo si viene de `servicios_extraccion.py`). Recarga
+  completa (`reemplazar=True` por default) para que el catálogo indexado
+  siempre refleje el estado actual de los archivos.
 - `src/servicios_extraccion.py` — camino alternativo para poblar el catálogo:
   a partir de un PDF/Word/folleto suelto que el usuario ya tenga, extrae un
   borrador de ficha de servicio en JSON (mismos 5 campos que la plantilla) y
@@ -61,7 +71,16 @@ gitignored) · Ollama (LLM + embeddings, todo local) · `python-docx`
   parseo al modelo si la respuesta no es JSON válido. Estos dos modos están
   deliberadamente separados (ver sección 5 de la guía original: un modelo de
   7B con `format="json"` sigue instrucciones de formato mucho mejor que uno
-  de 3B).
+  de 3B). Usa un `ollama.Client` propio con `timeout=config.LLM_TIMEOUT_SEGUNDOS`
+  (900s por default) — las funciones sueltas del paquete (`ollama.chat`) usan
+  un cliente con `timeout=None`, que en httpx significa esperar para
+  siempre; sin esto, un Ollama trabado dejaba la UI "cargando" sin ningún
+  error. `vectorstore.py` tiene el mismo patrón para embeddings
+  (`EMBED_TIMEOUT_SEGUNDOS`, más corto porque embeddings es mucho más rápido
+  que generación). `app.py` tiene `_mensaje_error_ollama()` para traducir
+  `httpx.ConnectError`/`httpx.TimeoutException` a un mensaje legible en vez
+  del traceback crudo — todo punto que llama a `llm.py` o dispara embeddings
+  está envuelto en `try/except Exception` usando ese helper.
 - `src/extraccion.py` — extracción estructurada de requisitos (JSON:
   `{"requisito", "categoria"}`). Nunca debe inventar requisitos que no estén
   en el documento.
@@ -121,6 +140,16 @@ corto en extracción estructurada + matching (la parte más exigente). Default
 actual: `qwen2.5:7b-instruct` (configurable vía `ANALIZADOR_LLM_MODEL`).
 Alternativa evaluada: `mistral:7b-instruct`. Esperar 1-3 min por propuesta en
 CPU es aceptable — no es un flujo en tiempo real.
+
+Importante distinguir dos tipos de operación bien distintos en velocidad:
+las que solo calculan **embeddings** (Cargar documento, Cargar/recargar
+catálogo) deberían ser cuestión de segundos — van en lote a `nomic-embed-text`,
+un modelo chico. Las que hacen **generación con el LLM de 7B** (Extraer
+borrador de servicio, Extraer requisitos, Generar propuesta, Generar
+documento PMI) son inherentemente lentas en CPU (minutos, no segundos) — eso
+no es un bug a arreglar con código, es el costo de correr un modelo capaz
+100% local sin GPU. Si algún día hay quejas de velocidad ahí, las palancas
+reales son: modelo más chico (`llama3.2:3b`, con peor calidad), o GPU.
 
 ## Comandos
 
