@@ -134,6 +134,14 @@ with tab_catalogo:
         try:
             with st.spinner("Extrayendo información del documento (puede tardar varios minutos)..."):
                 texto_servicio = ingesta.extraer_texto(ruta_tmp)
+                if len(texto_servicio.split()) < 20:
+                    raise ValueError(
+                        "El documento no tiene texto legible (menos de 20 palabras extraídas). "
+                        "Si es un PDF escaneado (una foto/imagen del documento, sin capa de "
+                        "texto seleccionable), esta herramienta no hace OCR y no puede leerlo — "
+                        "probá exportar el PDF directo desde el Word original, o pasarlo por un "
+                        "OCR antes de subirlo."
+                    )
                 st.session_state["borrador_servicio"] = servicios_extraccion.extraer_borrador_servicio(
                     texto_servicio
                 )
