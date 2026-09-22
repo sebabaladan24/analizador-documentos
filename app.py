@@ -233,6 +233,13 @@ with tab_comparar:
 
 with tab_propuesta:
     st.subheader("Generar propuesta técnica")
+    st.caption(
+        "Flujo de 2 pasos. **1. Extraer requisitos**: la IA lee el documento del cliente y "
+        "arma una lista de los requisitos técnicos que menciona (ej. \"necesita 40 servidores\", "
+        "\"los datos no pueden salir del país\"), cada uno con una categoría — la vas a poder "
+        "revisar y corregir antes de seguir. **2. Generar propuesta**: recién ahí busca en tu "
+        "catálogo de servicios qué cubre cada requisito y redacta el borrador final."
+    )
     docs = _docs_cliente_disponibles()
     if not docs:
         st.info(
