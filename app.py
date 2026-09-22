@@ -112,91 +112,127 @@ with tab_cargar:
             ruta_tmp.unlink(missing_ok=True)
 
 with tab_catalogo:
-    st.subheader("Agregar un servicio al catálogo desde un documento")
+    st.subheader("Agregar servicios al catálogo desde documentos")
     st.caption(
-        "Subí un folleto, ficha técnica o Word/PDF que ya tengas de un servicio propio. La IA "
-        "arma un borrador estructurado — revisalo y corregilo antes de guardarlo: puede no "
-        "captar bien las specs que el documento no dice de forma explícita, y nunca hay que "
-        "confiar en eso sin revisarlo primero."
+        "Subí uno o varios folletos/fichas técnicas en Word o PDF que ya tengas de tus "
+        "servicios propios — **no** los pongas a mano en la carpeta `servicios/`, esta pestaña "
+        "es la única forma de cargar Word/PDF (esa carpeta solo lee archivos `.md`, cualquier "
+        "otro tipo lo ignora en silencio). La IA arma un borrador estructurado por cada uno — "
+        "revisalo y corregilo antes de guardarlo: puede no captar bien las specs que el "
+        "documento no dice de forma explícita, y nunca hay que confiar en eso sin revisarlo "
+        "primero. Con varios archivos a la vez, la extracción puede tardar bastante (un modelo "
+        "de 7B sin GPU procesa uno por uno, varios minutos cada uno) — es normal, dejalo corriendo."
     )
 
-    archivo_servicio = st.file_uploader(
-        "Documento del servicio (PDF, DOCX, TXT o MD)",
+    archivos_servicio = st.file_uploader(
+        "Documentos de servicio (PDF, DOCX, TXT o MD) — podés seleccionar varios a la vez",
         type=["pdf", "docx", "txt", "md"],
+        accept_multiple_files=True,
         key="uploader_servicio",
     )
-    if archivo_servicio and st.button("Extraer borrador"):
-        with tempfile.NamedTemporaryFile(
-            delete=False, suffix=Path(archivo_servicio.name).suffix
-        ) as tmp:
-            tmp.write(archivo_servicio.getbuffer())
-            ruta_tmp = Path(tmp.name)
-        try:
-            with st.spinner("Extrayendo información del documento (puede tardar varios minutos)..."):
+    if archivos_servicio and st.button(f"Extraer borradores ({len(archivos_servicio)} archivo/s)"):
+        if "borradores_servicios" not in st.session_state:
+            st.session_state["borradores_servicios"] = {}
+        errores = []
+        texto_estado = st.empty()
+        barra_progreso = st.progress(0.0)
+        for i, archivo in enumerate(archivos_servicio):
+            texto_estado.text(f"Procesando {i + 1}/{len(archivos_servicio)}: {archivo.name}")
+            with tempfile.NamedTemporaryFile(delete=False, suffix=Path(archivo.name).suffix) as tmp:
+                tmp.write(archivo.getbuffer())
+                ruta_tmp = Path(tmp.name)
+            try:
                 texto_servicio = ingesta.extraer_texto(ruta_tmp)
                 if len(texto_servicio.split()) < 20:
                     raise ValueError(
-                        "El documento no tiene texto legible (menos de 20 palabras extraídas). "
-                        "Si es un PDF escaneado (una foto/imagen del documento, sin capa de "
-                        "texto seleccionable), esta herramienta no hace OCR y no puede leerlo — "
-                        "probá exportar el PDF directo desde el Word original, o pasarlo por un "
-                        "OCR antes de subirlo."
+                        "no tiene texto legible (menos de 20 palabras extraídas). Si es un PDF "
+                        "escaneado (una foto/imagen sin capa de texto seleccionable), esta "
+                        "herramienta no hace OCR y no puede leerlo — probá exportarlo directo "
+                        "desde el Word original, o pasarlo por un OCR antes de subirlo."
                     )
-                st.session_state["borrador_servicio"] = servicios_extraccion.extraer_borrador_servicio(
-                    texto_servicio
+                st.session_state["borradores_servicios"][archivo.name] = (
+                    servicios_extraccion.extraer_borrador_servicio(texto_servicio)
                 )
-        except Exception as error:
-            st.error(f"No se pudo extraer el borrador: {_mensaje_error_ollama(error)}")
-        finally:
-            ruta_tmp.unlink(missing_ok=True)
+            except Exception as error:
+                errores.append(f"**{archivo.name}**: {_mensaje_error_ollama(error)}")
+            finally:
+                ruta_tmp.unlink(missing_ok=True)
+            barra_progreso.progress((i + 1) / len(archivos_servicio))
+        texto_estado.empty()
+        barra_progreso.empty()
+        if errores:
+            st.error("No se pudieron procesar algunos documentos:\n\n" + "\n\n".join(errores))
 
-    if "borrador_servicio" in st.session_state:
-        borrador = st.session_state["borrador_servicio"]
-        st.warning(
-            "Revisá cada campo antes de guardar. Los que dicen '[Verificar...]' no estaban "
-            "claros en el documento fuente — completalos a mano si corresponde, o dejalos así "
-            "si de verdad no aplican."
-        )
+    borradores = st.session_state.get("borradores_servicios", {})
+    if borradores:
+        st.write(f"{len(borradores)} borrador/es pendiente/s de revisión:")
 
-        col1, col2 = st.columns(2)
-        with col1:
-            borrador["nombre"] = st.text_input(
-                "Nombre del servicio", value=borrador.get("nombre", ""), key="campo_nombre"
-            )
-        with col2:
-            borrador["categoria"] = st.text_input(
-                "Categoría", value=borrador.get("categoria", ""), key="campo_categoria"
-            )
-
-        for clave, titulo in servicios_extraccion.CAMPOS_ORDEN:
-            borrador[clave] = st.text_area(
-                titulo, value=borrador.get(clave, ""), height=120, key=f"campo_{clave}"
+    for nombre_archivo_origen, borrador in list(borradores.items()):
+        with st.expander(f"📄 {nombre_archivo_origen}", expanded=True):
+            st.warning(
+                "Revisá cada campo antes de guardar. Los que dicen '[Verificar...]' no estaban "
+                "claros en el documento fuente — completalos a mano si corresponde, o dejalos "
+                "así si de verdad no aplican."
             )
 
-        if st.button("Guardar en el catálogo"):
-            if not borrador["nombre"].strip():
-                st.error("Ponele un nombre al servicio antes de guardar.")
-            else:
-                nombre_archivo = f"{servicios_extraccion.slug_desde_nombre(borrador['nombre'])}.md"
-                ruta_destino = config.SERVICIOS_DIR / nombre_archivo
-                ruta_destino.write_text(
-                    servicios_extraccion.borrador_a_markdown(borrador), encoding="utf-8"
+            clave_base = servicios_extraccion.slug_desde_nombre(nombre_archivo_origen)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                borrador["nombre"] = st.text_input(
+                    "Nombre del servicio",
+                    value=borrador.get("nombre", ""),
+                    key=f"campo_nombre_{clave_base}",
                 )
-                try:
-                    with st.spinner("Guardando y recargando el catálogo..."):
-                        servicios, total_chunks = servicios_loader.cargar_catalogo_servicios()
-                    st.session_state["servicios_cargados"] = servicios
-                    del st.session_state["borrador_servicio"]
-                    st.success(
-                        f"Guardado como `servicios/{nombre_archivo}` y recargado en el catálogo "
-                        f"({len(servicios)} servicios, {total_chunks} fragmentos)."
-                    )
-                except Exception as error:
-                    st.error(
-                        f"Se guardó `servicios/{nombre_archivo}`, pero no se pudo recargar el "
-                        f"catálogo: {_mensaje_error_ollama(error)} Podés reintentar con el botón "
-                        "'Cargar / recargar catálogo de servicios' de la barra lateral."
-                    )
+            with col2:
+                borrador["categoria"] = st.text_input(
+                    "Categoría",
+                    value=borrador.get("categoria", ""),
+                    key=f"campo_categoria_{clave_base}",
+                )
+
+            for clave, titulo in servicios_extraccion.CAMPOS_ORDEN:
+                borrador[clave] = st.text_area(
+                    titulo,
+                    value=borrador.get(clave, ""),
+                    height=120,
+                    key=f"campo_{clave}_{clave_base}",
+                )
+
+            col_guardar, col_descartar = st.columns(2)
+            with col_guardar:
+                if st.button("Guardar en el catálogo", key=f"guardar_{clave_base}"):
+                    if not borrador["nombre"].strip():
+                        st.error("Ponele un nombre al servicio antes de guardar.")
+                    else:
+                        nombre_archivo_md = (
+                            f"{servicios_extraccion.slug_desde_nombre(borrador['nombre'])}.md"
+                        )
+                        ruta_destino = config.SERVICIOS_DIR / nombre_archivo_md
+                        ruta_destino.write_text(
+                            servicios_extraccion.borrador_a_markdown(borrador), encoding="utf-8"
+                        )
+                        try:
+                            with st.spinner("Guardando y recargando el catálogo..."):
+                                servicios, total_chunks = servicios_loader.cargar_catalogo_servicios()
+                            st.session_state["servicios_cargados"] = servicios
+                            del st.session_state["borradores_servicios"][nombre_archivo_origen]
+                            st.success(
+                                f"Guardado como `servicios/{nombre_archivo_md}` y recargado "
+                                f"({len(servicios)} servicios, {total_chunks} fragmentos)."
+                            )
+                            st.rerun()
+                        except Exception as error:
+                            st.error(
+                                f"Se guardó `servicios/{nombre_archivo_md}`, pero no se pudo "
+                                f"recargar el catálogo: {_mensaje_error_ollama(error)} Podés "
+                                "reintentar con el botón 'Cargar / recargar catálogo de "
+                                "servicios' de la barra lateral."
+                            )
+            with col_descartar:
+                if st.button("Descartar", key=f"descartar_{clave_base}"):
+                    del st.session_state["borradores_servicios"][nombre_archivo_origen]
+                    st.rerun()
 
 with tab_resumir:
     st.subheader("Resumir documento de cliente")

@@ -62,8 +62,18 @@ gitignored) · Ollama (LLM + embeddings, todo local) · `python-docx`
   IA de por medio), acá el modelo sí interpreta texto libre — por eso el
   resultado NUNCA se guarda directo: `app.py` (pestaña "Catálogo de
   servicios") lo muestra editable primero, y recién al tocar "Guardar" se
-  escribe a `/servicios/*.md` y se reindexa. Los campos que el documento
-  fuente no menciona con claridad quedan como
+  escribe a `/servicios/*.md` y se reindexa. Esta pestaña acepta **varios
+  archivos a la vez** (`st.file_uploader(accept_multiple_files=True)`) — es
+  la ÚNICA forma soportada de cargar Word/PDF al catálogo; poner esos
+  archivos directo en `/servicios/` no funciona, esa carpeta solo la lee
+  `servicios_loader.py` y únicamente toma `.md` (cualquier otro tipo lo
+  ignora en silencio — confundió a un usuario real, por eso el aviso está
+  también en el caption de la pestaña). Cada archivo subido genera un
+  borrador independiente en `st.session_state["borradores_servicios"]`
+  (dict keyeado por nombre de archivo origen), cada uno con su propio
+  expander/Guardar/Descartar — nunca hay un botón de "guardar todos sin
+  mirar", eso rompería la garantía de revisión humana. Los campos que el
+  documento fuente no menciona con claridad quedan como
   `"[Verificar - no especificado en el documento fuente]"` en vez de
   inventarse.
 - `src/llm.py` — wrapper sobre Ollama. `chat()` para prosa libre;

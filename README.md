@@ -45,10 +45,16 @@ Para agregar un servicio nuevo, dos formas:
 
 - A mano: copiar `servicios/_template.md` y completar sus secciones (Descripción,
   Especificaciones técnicas, SLA, Cuándo ofrecerlo / Cuándo NO ofrecerlo).
-- Asistido: pestaña "Catálogo de servicios" de la app — subís un PDF/Word/folleto
-  que ya tengas del servicio, la IA arma un borrador con esas mismas secciones, y
-  lo revisás/editás antes de guardarlo. Los campos que el documento no dice
+- Asistido: pestaña "Catálogo de servicios" de la app — subís uno o **varios**
+  PDF/Word/folletos que ya tengas (podés seleccionar varios a la vez), la IA
+  arma un borrador por cada uno con esas mismas secciones, y los revisás/editás
+  uno por uno antes de guardar cada uno. Los campos que el documento no dice
   explícitamente quedan marcados "[Verificar...]" en vez de inventarse.
+
+**Importante**: esta pestaña es la única forma de cargar Word/PDF al catálogo.
+Poner esos archivos directo en la carpeta `servicios/` **no funciona** — el
+botón "Cargar / recargar catálogo de servicios" de la barra lateral solo lee
+archivos `.md`, cualquier otro tipo lo ignora sin avisar.
 
 ## Uso
 
